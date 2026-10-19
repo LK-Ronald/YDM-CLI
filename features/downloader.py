@@ -31,7 +31,7 @@ class Downloader:
         self._ui.info(f"  Directorio de descarga: {output_dir}")
         self._ui.info("  Iniciando descarga...\n")
 
-        success, message = self._wrapper.download(url, output_dir)
+        success, message = self._wrapper.download(url, output_dir, noplaylist=True)
 
         if success:
             self._ui.success(f"Descarga completada: {message}")

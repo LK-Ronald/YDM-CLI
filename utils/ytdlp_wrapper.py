@@ -4,6 +4,7 @@ Resuelve los problemas de JS de YouTube mediante yt-dlp actualizado.
 Descarga en la máxima calidad disponible y convierte a MP3 ≥ 128 kbps.
 """
 import sys
+import urllib.parse
 from pathlib import Path
 from core.config_manager import ConfigManager
 
@@ -20,7 +21,62 @@ class YtDlpWrapper:
     def __init__(self, config_manager: ConfigManager):
         self._config = config_manager
 
-    def download(self, url: str, output_dir: str) -> tuple[bool, str]:
+    @staticmethod
+    def normalize_url(url: str) -> str:
+        """
+        Normaliza enlaces que contienen parámetros de lista (list=) para
+        asegurar que se apunte al recurso completo de playlist o álbum.
+        """
+        clean_url = url.strip()
+        try:
+            parsed = urllib.parse.urlparse(clean_url)
+            qs = urllib.parse.parse_qs(parsed.query)
+            if "list" in qs and "playlist" not in parsed.path:
+                list_id = qs["list"][0]
+                domain = "music.youtube.com" if "music.youtube" in parsed.netloc else "www.youtube.com"
+                return f"https://{domain}/playlist?list={list_id}"
+        except Exception:
+            pass
+        return clean_url
+
+    def extract_info(self, url: str) -> tuple[bool, dict | str]:
+        """
+        Extrae la información de una URL (canción, playlist o álbum) sin descargarla.
+        Retorna (éxito, info_dict_o_error).
+        """
+        if not YTDLP_AVAILABLE:
+            return False, "yt-dlp no está instalado. Ejecuta: pip install yt-dlp"
+
+        normalized_url = self.normalize_url(url)
+
+        ydl_opts = {
+            "quiet": True,
+            "extract_flat": True,
+            "noplaylist": False,
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["android", "web"],
+                }
+            },
+        }
+
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(normalized_url, download=False)
+                if not info:
+                    return False, "No se pudo obtener información del enlace."
+                return True, info
+        except yt_dlp.utils.DownloadError as e:
+            return False, self._friendly_error(str(e))
+        except Exception as e:
+            return False, f"Error inesperado al extraer información: {e}"
+
+    def download(
+        self,
+        url: str,
+        output_dir: str,
+        noplaylist: bool = True,
+    ) -> tuple[bool, str]:
         """
         Descarga el audio de la URL indicada al directorio de salida.
         Retorna (éxito, mensaje).
@@ -31,26 +87,15 @@ class YtDlpWrapper:
             )
 
         bitrate = self._config.get("bitrate", "320k")
-        # yt-dlp usa el valor numérico sin 'k'
         bitrate_num = bitrate.replace("k", "")
 
         output_template = str(Path(output_dir) / "%(title)s.%(ext)s")
 
         ydl_opts = {
-            # Selecciona el mejor audio disponible
             "format": "bestaudio/best",
             "outtmpl": output_template,
-            # Conversión a MP3 con calidad configurable (mínimo 128 kbps)
-            "postprocessors": [
-                {
-                    "key": "FFmpegExtractAudio",
-                    "preferredcodec": "mp3",
-                    "preferredquality": bitrate_num,
-                }
-            ],
-            # Barra de progreso personalizada
+            "noplaylist": noplaylist,
             "progress_hooks": [self._progress_hook],
-            # Metadata embebida (portada, artista, etc.)
             "writethumbnail": False,
             "embedthumbnail": False,
             "addmetadata": True,
@@ -62,16 +107,13 @@ class YtDlpWrapper:
                 },
                 {"key": "FFmpegMetadata"},
             ],
-            # Silencia la salida por defecto de yt-dlp (usamos nuestro hook)
             "quiet": True,
             "no_warnings": False,
-            # Resuelve problemas de JS / throttling de YouTube
             "extractor_args": {
                 "youtube": {
                     "player_client": ["android", "web"],
                 }
             },
-            # Reintentos ante errores de red
             "retries": 5,
             "fragment_retries": 5,
         }

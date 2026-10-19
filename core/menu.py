@@ -5,6 +5,7 @@ Coordina las opciones sin conocer detalles de implementación.
 from core.config_manager import ConfigManager
 from features.downloader import Downloader
 from features.batch_downloader import BatchDownloader
+from features.playlist_downloader import PlaylistDownloader
 from features.converter import Converter
 from features.configurator import Configurator
 from utils.ui import UI
@@ -18,6 +19,7 @@ class Menu:
         self._ui = UI()
         self._downloader = Downloader(config_manager)
         self._batch = BatchDownloader(config_manager)
+        self._playlist = PlaylistDownloader(config_manager)
         self._converter = Converter(config_manager)
         self._configurator = Configurator(config_manager)
 
@@ -33,15 +35,16 @@ class Menu:
         options = {
             "1": self._downloader.run,
             "2": self._batch.run,
-            "3": self._converter.run,
-            "4": self._configurator.run,
-            "5": self._exit,
+            "3": self._playlist.run,
+            "4": self._converter.run,
+            "5": self._configurator.run,
+            "6": self._exit,
         }
         action = options.get(choice)
         if action:
             action()
         else:
-            self._ui.error("Opción no válida. Elige entre 1 y 5.")
+            self._ui.error(f"Opción no válida. Elige entre 1 y {len(options)}.")
 
     def _exit(self) -> None:
         self._ui.success("¡Hasta luego! 🎵")

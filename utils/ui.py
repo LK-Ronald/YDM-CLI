@@ -53,9 +53,10 @@ class UI:
         options = [
             ("1", "Descargar música"),
             ("2", "Descargar lista de músicas desde archivo"),
-            ("3", "Convertir archivos a otro formato"),
-            ("4", "Configuración"),
-            ("5", "Salir"),
+            ("3", "Descargar playlist o álbum"),
+            ("4", "Convertir archivos a otro formato"),
+            ("5", "Configuración"),
+            ("6", "Salir"),
         ]
         for num, label in options:
             print(f"  {CYAN}[{num}]{RESET} {label}")
