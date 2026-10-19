@@ -1,0 +1,5 @@
+# YouTube Downloader Music - Dependencias
+# Python >= 3.10
+
+# Descargador de video/audio desde YouTube y YouTube Music
+yt-dlp>=2024.1.0

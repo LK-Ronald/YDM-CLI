@@ -1,0 +1,8 @@
+# Lista de canciones para descargar - una URL por línea
+# Las líneas que empiezan con # son comentarios y se ignoran
+# Ejemplo:
+# https://www.youtube.com/watch?v=XXXXXXXXXXX
+# https://music.youtube.com/watch?v=XXXXXXXXXXX
+
+
+
