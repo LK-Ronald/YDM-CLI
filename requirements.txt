@@ -3,3 +3,7 @@
 
 # Descargador de video/audio desde YouTube y YouTube Music
 yt-dlp>=2024.1.0
+
+# Para incrustar la portada dentro del MP3 y trabajar con thumbnails
+mutagen>=1.47.0
+Pillow>=10.0.0

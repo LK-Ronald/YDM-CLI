@@ -124,7 +124,8 @@ Aparecerá el menú principal:
 1. Elige la opción `1`.
 2. Pega el enlace de YouTube o YouTube Music.
 3. El programa descarga automáticamente en la mejor calidad disponible y convierte a **MP3** con el bitrate configurado (por defecto **320 kbps**).
-4. La canción se guarda en el directorio configurado en **Configuración** (por defecto: `C:\Users\TuUsuario\Music\Downloads`).
+4. Si YouTube proporciona una portada, se descarga, recorta a formato cuadrado (1:1) con FFmpeg y se embebe en el MP3 junto con sus metadatos.
+5. La canción se guarda en el directorio configurado en **Configuración** (por defecto: `C:\Users\TuUsuario\Music\Downloads`).
 
 ---
 

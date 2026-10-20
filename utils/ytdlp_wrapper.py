@@ -3,16 +3,94 @@ Wrapper de yt-dlp - abstrae la descarga y maneja la barra de progreso.
 Resuelve los problemas de JS de YouTube mediante yt-dlp actualizado.
 Descarga en la máxima calidad disponible y convierte a MP3 ≥ 128 kbps.
 """
+import subprocess
 import sys
+import tempfile
 import urllib.parse
 from pathlib import Path
+
 from core.config_manager import ConfigManager
 
 try:
     import yt_dlp
+    from yt_dlp.postprocessor.common import PostProcessor
+    from yt_dlp.postprocessor.embedthumbnail import EmbedThumbnailPP
+    from yt_dlp.utils import PostProcessingError
     YTDLP_AVAILABLE = True
 except ImportError:
     YTDLP_AVAILABLE = False
+    PostProcessor = object
+
+
+class SquareThumbnailPP(PostProcessor):
+    """Recorta el thumbnail descargado a un cuadrado antes de embeberlo."""
+
+    def run(self, info: dict) -> tuple[list[str], dict]:
+        thumbnail = next(
+            (
+                item
+                for item in reversed(info.get("thumbnails", []))
+                if item.get("filepath")
+            ),
+            None,
+        )
+        if not thumbnail:
+            self.report_warning("No hay thumbnail disponible para recortar.")
+            return [], info
+
+        thumbnail_path = Path(thumbnail["filepath"])
+        if not thumbnail_path.is_file():
+            self.report_warning("No se encontró el thumbnail descargado para recortarlo.")
+            return [], info
+
+        with tempfile.NamedTemporaryFile(
+            prefix="thumbnail-square-",
+            suffix=thumbnail_path.suffix,
+            dir=thumbnail_path.parent,
+            delete=False,
+        ) as temporary_file:
+            temporary_path = Path(temporary_file.name)
+
+        try:
+            subprocess.run(
+                [
+                    "ffmpeg",
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-y",
+                    "-i",
+                    str(thumbnail_path),
+                    "-vf",
+                    r"crop=min(iw\,ih):min(iw\,ih)",
+                    "-frames:v",
+                    "1",
+                    str(temporary_path),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=300,
+                check=True,
+            )
+            temporary_path.replace(thumbnail_path)
+        except FileNotFoundError as error:
+            raise PostProcessingError(
+                "FFmpeg no encontrado al recortar la portada."
+            ) from error
+        except subprocess.TimeoutExpired as error:
+            raise PostProcessingError(
+                "Se agotó el tiempo al recortar la portada con FFmpeg."
+            ) from error
+        except subprocess.CalledProcessError as error:
+            detail = (error.stderr or "").strip()
+            raise PostProcessingError(
+                f"FFmpeg no pudo recortar la portada: {detail}"
+            ) from error
+        finally:
+            temporary_path.unlink(missing_ok=True)
+
+        self.to_screen(f"Thumbnail recortado a 1:1: {thumbnail_path.name}")
+        return [], info
 
 
 class YtDlpWrapper:
@@ -86,17 +164,20 @@ class YtDlpWrapper:
                 "yt-dlp no está instalado. Ejecuta: pip install yt-dlp"
             )
 
-        bitrate = self._config.get("bitrate", "320k")
-        bitrate_num = bitrate.replace("k", "")
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
 
-        output_template = str(Path(output_dir) / "%(title)s.%(ext)s")
+        bitrate = self._config.get("bitrate", "320k")
+        bitrate_num = str(bitrate).replace("k", "")
+
+        output_template = str(output_path / "%(title)s.%(ext)s")
 
         ydl_opts = {
             "format": "bestaudio/best",
             "outtmpl": output_template,
             "noplaylist": noplaylist,
             "progress_hooks": [self._progress_hook],
-            "writethumbnail": False,
+            "writethumbnail": True,
             "embedthumbnail": False,
             "addmetadata": True,
             "postprocessors": [
@@ -122,8 +203,11 @@ class YtDlpWrapper:
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.add_post_processor(SquareThumbnailPP(ydl))
+                ydl.add_post_processor(EmbedThumbnailPP(ydl))
                 info = ydl.extract_info(url, download=True)
                 title = info.get("title", url) if info else url
+            self._cleanup_thumbnail_files(output_path, info)
             print()  # Salto de línea tras la barra de progreso
             return True, title
         except yt_dlp.utils.DownloadError as e:
@@ -132,6 +216,22 @@ class YtDlpWrapper:
         except Exception as e:
             print()
             return False, f"Error inesperado: {e}"
+
+    @staticmethod
+    def _cleanup_thumbnail_files(output_dir: Path, info: dict | None) -> None:
+        """Elimina thumbnails temporales reportados por yt-dlp."""
+        if not output_dir.exists():
+            return
+
+        output_root = output_dir.resolve()
+        for thumbnail in (info or {}).get("thumbnails", []):
+            filepath = thumbnail.get("filepath")
+            if not filepath:
+                continue
+
+            thumbnail_path = Path(filepath).resolve()
+            if thumbnail_path.parent == output_root:
+                thumbnail_path.unlink(missing_ok=True)
 
     def _progress_hook(self, d: dict) -> None:
         """Dibuja una barra de progreso ASCII en la misma línea."""
