@@ -33,7 +33,12 @@ class PlaylistDownloader:
         self._ui.info(f"Directorio base: {output_dir}")
         self._ui.info("Obteniendo información de la playlist o álbum...\n")
 
-        success, info_or_error = self._wrapper.extract_info(url)
+        try:
+            success, info_or_error = self._wrapper.extract_info(url)
+        except KeyboardInterrupt:
+            self._ui.warning("\nObtención de información interrumpida por el usuario.")
+            input("\n  Presiona Enter para continuar...")
+            return
         if not success:
             self._ui.error(f"Error al obtener información: {info_or_error}")
             input("\n  Presiona Enter para continuar...")
@@ -46,7 +51,12 @@ class PlaylistDownloader:
         # Si el enlace resultó ser un video individual
         if raw_entries is None:
             self._ui.info("El enlace corresponde a una pista individual. Descargando canción...")
-            ok, msg = self._wrapper.download(url, output_dir, noplaylist=True)
+            try:
+                ok, msg = self._wrapper.download(url, output_dir, noplaylist=True)
+            except KeyboardInterrupt:
+                self._ui.warning("\nDescarga interrumpida por el usuario.")
+                input("\n  Presiona Enter para continuar...")
+                return
             if ok:
                 self._ui.success(f"Descarga completada: {msg}")
             else:

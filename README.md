@@ -157,6 +157,10 @@ https://music.youtube.com/watch?v=XXXXXXXXXXX
 
 ### [4] Configuración
 
+El tiempo máximo de conexión es de 30 segundos por defecto (configurable entre 5 y 120 segundos). Las descargas simultáneas de fragmentos usan un máximo de 4 por defecto, con un rango configurable de 1 a 8.
+
+Al fallar o cancelar una descarga con `Ctrl+C`, se limpian los archivos temporales generados (`.part`, `.ytdl` y miniaturas sueltas). Los procesos auxiliares de FFmpeg se terminan al cancelar.
+
 Permite personalizar:
 
 - **Directorio de descargas** — dónde se guardan las canciones descargadas.

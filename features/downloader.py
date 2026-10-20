@@ -31,7 +31,16 @@ class Downloader:
         self._ui.info(f"  Directorio de descarga: {output_dir}")
         self._ui.info("  Iniciando descarga...\n")
 
-        success, message = self._wrapper.download(url, output_dir, noplaylist=True)
+        try:
+            success, message = self._wrapper.download(
+                url,
+                output_dir,
+                noplaylist=True,
+            )
+        except KeyboardInterrupt:
+            self._ui.warning("\nDescarga interrumpida por el usuario.")
+            input("\n  Presiona Enter para continuar...")
+            return
 
         if success:
             self._ui.success(f"Descarga completada: {message}")
