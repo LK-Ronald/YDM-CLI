@@ -2,7 +2,13 @@
 Configurador interactivo - permite al usuario personalizar los directorios y ajustes.
 """
 from pathlib import Path
-from core.config_manager import ConfigManager
+from core.config_manager import (
+    CONCURRENT_FRAGMENT_DOWNLOADS_MAX,
+    CONCURRENT_FRAGMENT_DOWNLOADS_MIN,
+    SOCKET_TIMEOUT_MAX,
+    SOCKET_TIMEOUT_MIN,
+    ConfigManager,
+)
 from utils.ui import UI
 
 BITRATE_OPTIONS = ["128k", "192k", "256k", "320k"]
@@ -25,7 +31,9 @@ class Configurator:
         print("  [2] Directorio de conversiones")
         print("  [3] Formato de descarga por defecto")
         print("  [4] Bitrate de descarga")
-        print("  [5] Volver al menú principal")
+        print("  [5] Tiempo máximo de espera de conexión")
+        print("  [6] Descargas simultáneas de fragmentos")
+        print("  [7] Volver al menú principal")
 
         choice = input("\n  Selecciona: ").strip()
 
@@ -38,6 +46,20 @@ class Configurator:
         elif choice == "4":
             self._set_bitrate()
         elif choice == "5":
+            self._set_integer(
+                "socket_timeout",
+                "Tiempo máximo de espera de conexión (segundos)",
+                SOCKET_TIMEOUT_MIN,
+                SOCKET_TIMEOUT_MAX,
+            )
+        elif choice == "6":
+            self._set_integer(
+                "concurrent_fragment_downloads",
+                "Descargas simultáneas de fragmentos",
+                CONCURRENT_FRAGMENT_DOWNLOADS_MIN,
+                CONCURRENT_FRAGMENT_DOWNLOADS_MAX,
+            )
+        elif choice == "7":
             return
         else:
             self._ui.error("Opción no válida.")
@@ -51,6 +73,11 @@ class Configurator:
         print(f"    📁 Conversiones : {all_cfg.get('converted_dir')}")
         print(f"    🎵 Formato      : {all_cfg.get('default_format')}")
         print(f"    📻 Bitrate      : {all_cfg.get('bitrate')}")
+        print(f"    ⏱️  Timeout      : {all_cfg.get('socket_timeout')} s")
+        print(
+            "    🔀 Fragmentos   : "
+            f"{all_cfg.get('concurrent_fragment_downloads')} simultáneos"
+        )
 
     def _set_dir(self, key: str, label: str) -> None:
         current = self._config.get(key)
@@ -94,3 +121,29 @@ class Configurator:
         self._config.set("bitrate", new_val)
         self._config.save()
         self._ui.success(f"Bitrate actualizado a: {new_val}")
+
+    def _set_integer(
+        self,
+        key: str,
+        label: str,
+        minimum: int,
+        maximum: int,
+    ) -> None:
+        current = self._config.get(key)
+        new_val = input(
+            f"\n  {label} [{current}] ({minimum}-{maximum}): "
+        ).strip()
+        if not new_val:
+            self._ui.info("  Sin cambios.")
+            return
+        try:
+            value = int(new_val)
+        except ValueError:
+            self._ui.error("Ingresa un número entero.")
+            return
+        if not minimum <= value <= maximum:
+            self._ui.error(f"El valor debe estar entre {minimum} y {maximum}.")
+            return
+        self._config.set(key, value)
+        self._config.save()
+        self._ui.success(f"{label} actualizado a: {value}")

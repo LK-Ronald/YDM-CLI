@@ -12,7 +12,14 @@ DEFAULT_CONFIG = {
     "converted_dir": str(Path.home() / "Music" / "Converted"),
     "default_format": "mp3",
     "bitrate": "320k",
+    "socket_timeout": 30,
+    "concurrent_fragment_downloads": 4,
 }
+
+SOCKET_TIMEOUT_MIN = 5
+SOCKET_TIMEOUT_MAX = 120
+CONCURRENT_FRAGMENT_DOWNLOADS_MIN = 1
+CONCURRENT_FRAGMENT_DOWNLOADS_MAX = 8
 
 CONFIG_FILE = Path.home() / ".ytdl_music_config.json"
 
@@ -29,7 +36,11 @@ class ConfigManager:
         if CONFIG_FILE.exists():
             try:
                 with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                    self._config = json.load(f)
+                    loaded_config = json.load(f)
+                self._config = {
+                    **DEFAULT_CONFIG,
+                    **loaded_config,
+                } if isinstance(loaded_config, dict) else DEFAULT_CONFIG.copy()
             except (json.JSONDecodeError, IOError):
                 self._config = DEFAULT_CONFIG.copy()
         else:

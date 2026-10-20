@@ -44,17 +44,33 @@ class BatchDownloader:
         self._config.ensure_dirs()
 
         failed = []
-        for i, url in enumerate(urls, 1):
-            self._ui.info(f"  [{i}/{len(urls)}] Descargando: {url}")
-            success, message = self._wrapper.download(url, output_dir)
-            if success:
-                self._ui.success(f"  ✓ Completado: {message}")
-            else:
-                self._ui.error(f"  ✗ Falló: {message}")
-                failed.append((url, message))
+        completed = 0
+        interrupted = False
+        try:
+            for i, url in enumerate(urls, 1):
+                self._ui.info(f"  [{i}/{len(urls)}] Descargando: {url}")
+                success, message = self._wrapper.download(url, output_dir)
+                completed += 1
+                if success:
+                    self._ui.success(f"  ✓ Completado: {message}")
+                else:
+                    self._ui.error(f"  ✗ Falló: {message}")
+                    failed.append((url, message))
+        except KeyboardInterrupt:
+            interrupted = True
+            self._ui.warning("\nDescarga interrumpida por el usuario.")
 
         print()
-        self._ui.info(f"  Proceso completado. {len(urls) - len(failed)}/{len(urls)} descargadas.")
+        if interrupted:
+            self._ui.info(
+                f"  Proceso cancelado. {completed - len(failed)}/{completed} "
+                "descargadas antes de la interrupción."
+            )
+        else:
+            self._ui.info(
+                f"  Proceso completado. "
+                f"{len(urls) - len(failed)}/{len(urls)} descargadas."
+            )
         if failed:
             self._ui.warning("  Las siguientes canciones fallaron:")
             for url, reason in failed:

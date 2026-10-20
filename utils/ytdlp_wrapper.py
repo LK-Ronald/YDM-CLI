@@ -8,8 +8,23 @@ import sys
 import tempfile
 import urllib.parse
 from pathlib import Path
+<<<<<<< HEAD
 
+=======
+<<<<<<< Updated upstream
+>>>>>>> feature/control-descargas
 from core.config_manager import ConfigManager
+=======
+
+from core.config_manager import (
+    CONCURRENT_FRAGMENT_DOWNLOADS_MAX,
+    CONCURRENT_FRAGMENT_DOWNLOADS_MIN,
+    SOCKET_TIMEOUT_MAX,
+    SOCKET_TIMEOUT_MIN,
+    ConfigManager,
+)
+from utils.ffmpeg_process import run_ffmpeg
+>>>>>>> Stashed changes
 
 try:
     import yt_dlp
@@ -19,6 +34,11 @@ try:
     YTDLP_AVAILABLE = True
 except ImportError:
     YTDLP_AVAILABLE = False
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+=======
+>>>>>>> feature/control-descargas
     PostProcessor = object
 
 
@@ -52,6 +72,7 @@ class SquareThumbnailPP(PostProcessor):
             temporary_path = Path(temporary_file.name)
 
         try:
+<<<<<<< HEAD
             subprocess.run(
                 [
                     "ffmpeg",
@@ -72,6 +93,24 @@ class SquareThumbnailPP(PostProcessor):
                 timeout=300,
                 check=True,
             )
+=======
+            command = [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-i",
+                str(thumbnail_path),
+                "-vf",
+                r"crop=min(iw\,ih):min(iw\,ih)",
+                "-frames:v",
+                "1",
+                str(temporary_path),
+            ]
+            result = run_ffmpeg(command, timeout=300)
+            result.check_returncode()
+>>>>>>> feature/control-descargas
             temporary_path.replace(thumbnail_path)
         except FileNotFoundError as error:
             raise PostProcessingError(
@@ -91,6 +130,10 @@ class SquareThumbnailPP(PostProcessor):
 
         self.to_screen(f"Thumbnail recortado a 1:1: {thumbnail_path.name}")
         return [], info
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> feature/control-descargas
 
 
 class YtDlpWrapper:
@@ -126,9 +169,18 @@ class YtDlpWrapper:
             return False, "yt-dlp no está instalado. Ejecuta: pip install yt-dlp"
 
         normalized_url = self.normalize_url(url)
+        try:
+            socket_timeout = self._bounded_config_value(
+                "socket_timeout",
+                SOCKET_TIMEOUT_MIN,
+                SOCKET_TIMEOUT_MAX,
+            )
+        except ValueError as error:
+            return False, str(error)
 
         ydl_opts = {
             "quiet": True,
+            "socket_timeout": socket_timeout,
             "extract_flat": True,
             "noplaylist": False,
             "extractor_args": {
@@ -164,6 +216,7 @@ class YtDlpWrapper:
                 "yt-dlp no está instalado. Ejecuta: pip install yt-dlp"
             )
 
+<<<<<<< HEAD
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 
@@ -171,11 +224,39 @@ class YtDlpWrapper:
         bitrate_num = str(bitrate).replace("k", "")
 
         output_template = str(output_path / "%(title)s.%(ext)s")
+=======
+        bitrate = self._config.get("bitrate", "320k")
+<<<<<<< Updated upstream
+        bitrate_num = bitrate.replace("k", "")
+
+        output_template = str(Path(output_dir) / "%(title)s.%(ext)s")
+=======
+        bitrate_num = str(bitrate).replace("k", "")
+        try:
+            socket_timeout = self._bounded_config_value(
+                "socket_timeout",
+                SOCKET_TIMEOUT_MIN,
+                SOCKET_TIMEOUT_MAX,
+            )
+            concurrent_fragments = self._bounded_config_value(
+                "concurrent_fragment_downloads",
+                CONCURRENT_FRAGMENT_DOWNLOADS_MIN,
+                CONCURRENT_FRAGMENT_DOWNLOADS_MAX,
+            )
+        except ValueError as error:
+            return False, str(error)
+
+        output_template = str(output_path / "%(title)s.%(ext)s")
+        temporary_files_before = self._snapshot_temporary_files(output_path)
+>>>>>>> Stashed changes
+>>>>>>> feature/control-descargas
 
         ydl_opts = {
             "format": "bestaudio/best",
             "outtmpl": output_template,
             "noplaylist": noplaylist,
+            "socket_timeout": socket_timeout,
+            "concurrent_fragment_downloads": concurrent_fragments,
             "progress_hooks": [self._progress_hook],
             "writethumbnail": True,
             "embedthumbnail": False,
@@ -210,12 +291,103 @@ class YtDlpWrapper:
             self._cleanup_thumbnail_files(output_path, info)
             print()  # Salto de línea tras la barra de progreso
             return True, title
+        except KeyboardInterrupt:
+            cleanup_errors = self._cleanup_temporary_files(
+                output_path,
+                temporary_files_before,
+            )
+            print()
+            if cleanup_errors:
+                print(
+                    "No se pudieron limpiar algunos archivos temporales: "
+                    + "; ".join(cleanup_errors),
+                    file=sys.stderr,
+                )
+            raise
         except yt_dlp.utils.DownloadError as e:
+            cleanup_errors = self._cleanup_temporary_files(
+                output_path,
+                temporary_files_before,
+            )
             print()
-            return False, self._friendly_error(str(e))
+            message = self._friendly_error(str(e))
+            if cleanup_errors:
+                message += " No se pudieron limpiar: " + "; ".join(cleanup_errors)
+            return False, message
         except Exception as e:
+            cleanup_errors = self._cleanup_temporary_files(
+                output_path,
+                temporary_files_before,
+            )
             print()
-            return False, f"Error inesperado: {e}"
+            message = f"Error inesperado: {e}"
+            if cleanup_errors:
+                message += " No se pudieron limpiar: " + "; ".join(cleanup_errors)
+            return False, message
+
+    def _bounded_config_value(self, key: str, minimum: int, maximum: int) -> int:
+        value = self._config.get(key)
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError) as error:
+            raise ValueError(f"Configuración inválida para {key}: {value!r}") from error
+        if not minimum <= parsed <= maximum:
+            raise ValueError(
+                f"Configuración inválida para {key}: debe estar entre "
+                f"{minimum} y {maximum}."
+            )
+        return parsed
+
+    @staticmethod
+    def _snapshot_temporary_files(output_dir: Path) -> dict[Path, tuple[int, int]]:
+        if not output_dir.exists():
+            return {}
+        snapshot = {}
+        for path in output_dir.iterdir():
+            if not path.is_file() or not YtDlpWrapper._is_temporary_file(path):
+                continue
+            try:
+                stat = path.stat()
+            except FileNotFoundError:
+                continue
+            snapshot[path] = (stat.st_mtime_ns, stat.st_size)
+        return snapshot
+
+    @staticmethod
+    def _is_temporary_file(path: Path) -> bool:
+        return (
+            path.suffix.lower() in {
+                ".part",
+                ".ytdl",
+                ".jpg",
+                ".jpeg",
+                ".png",
+                ".gif",
+                ".bmp",
+                ".webp",
+                ".avif",
+            }
+            or ".part-" in path.name.lower()
+        )
+
+    @staticmethod
+    def _cleanup_temporary_files(
+        output_dir: Path,
+        files_before: dict[Path, tuple[int, int]],
+    ) -> list[str]:
+        if not output_dir.exists():
+            return []
+        errors = []
+        for path in output_dir.iterdir():
+            if not path.is_file() or not YtDlpWrapper._is_temporary_file(path):
+                continue
+            try:
+                current = (path.stat().st_mtime_ns, path.stat().st_size)
+                if path not in files_before or files_before[path] != current:
+                    path.unlink(missing_ok=True)
+            except OSError as error:
+                errors.append(f"{path.name}: {error}")
+        return errors
 
     @staticmethod
     def _cleanup_thumbnail_files(output_dir: Path, info: dict | None) -> None:

@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 
 from core.config_manager import ConfigManager
+from utils.ffmpeg_process import run_ffmpeg
 from utils.ui import UI
 
 SUPPORTED_FORMATS = ["mp3", "flac", "wav", "ogg", "aac", "m4a", "alac", "opus"]
@@ -81,29 +82,52 @@ class Converter:
 
         failed = []
         converted = []
+        interrupted = False
+        conversion_in_progress = False
 
-        for i, audio_file in enumerate(audio_files, 1):
-            out_file = dest_path / (audio_file.stem + f".{target_format}")
-            self._ui.info(f"  [{i}/{len(audio_files)}] {audio_file.name} → {out_file.name}")
+        out_file = None
+        try:
+            for i, audio_file in enumerate(audio_files, 1):
+                out_file = dest_path / (audio_file.stem + f".{target_format}")
+                self._ui.info(f"  [{i}/{len(audio_files)}] {audio_file.name} → {out_file.name}")
 
-            success, error = self._convert(audio_file, out_file, target_format)
-            if success:
-                self._ui.success(f"  ✓ Convertido")
-                converted.append((audio_file, out_file))
-                if delete_originals:
-                    try:
-                        audio_file.unlink()
-                    except OSError as e:
-                        self._ui.warning(f"  No se pudo eliminar original: {e}")
-            else:
-                self._ui.error(f"  ✗ Error: {error}")
-                # Rollback: elimina el archivo de salida parcial si existe
-                if out_file.exists():
+                conversion_in_progress = True
+                success, error = self._convert(audio_file, out_file, target_format)
+                conversion_in_progress = False
+                if success:
+                    self._ui.success(f"  ✓ Convertido")
+                    converted.append((audio_file, out_file))
+                    if delete_originals:
+                        try:
+                            audio_file.unlink()
+                        except OSError as e:
+                            self._ui.warning(f"  No se pudo eliminar original: {e}")
+                else:
+                    self._ui.error(f"  ✗ Error: {error}")
+                    # Rollback: elimina el archivo de salida parcial si existe
+                    if out_file.exists():
+                        out_file.unlink()
+                    failed.append((audio_file.name, error))
+        except KeyboardInterrupt:
+            interrupted = True
+            if conversion_in_progress and out_file and out_file.exists():
+                try:
                     out_file.unlink()
-                failed.append((audio_file.name, error))
+                except OSError as error:
+                    self._ui.error(f"No se pudo eliminar el archivo parcial: {error}")
+            self._ui.warning("\nConversión interrumpida por el usuario.")
 
         print()
-        self._ui.info(f"  Conversión completada. {len(converted)}/{len(audio_files)} exitosas.")
+        if interrupted:
+            self._ui.info(
+                f"  Proceso cancelado. {len(converted)}/{len(audio_files)} "
+                "conversiones completadas."
+            )
+        else:
+            self._ui.info(
+                f"  Conversión completada. "
+                f"{len(converted)}/{len(audio_files)} exitosas."
+            )
         if failed:
             self._ui.warning("  Los siguientes archivos fallaron:")
             for name, reason in failed:
@@ -130,12 +154,7 @@ class Converter:
             str(dst)
         ]
         try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=300,
-            )
+            result = run_ffmpeg(cmd, timeout=300)
             if result.returncode == 0:
                 return True, ""
             return False, result.stderr.splitlines()[-1] if result.stderr else "Error desconocido"
@@ -146,11 +165,7 @@ class Converter:
 
     def _check_ffmpeg(self) -> bool:
         try:
-            subprocess.run(
-                ["ffmpeg", "-version"],
-                capture_output=True,
-                timeout=5,
-            )
+            run_ffmpeg(["ffmpeg", "-version"], timeout=5)
             return True
         except (FileNotFoundError, subprocess.TimeoutExpired):
             return False
