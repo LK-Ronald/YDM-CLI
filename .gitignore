@@ -1,6 +1,25 @@
-# Ignorar archivos ignecesarios
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
 
-Docs
+# Entornos virtuales y cachés de pruebas
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-venv
+# Artefactos de PyInstaller y compilación
+/build/
+/dist/
+*.spec
 
+# Documentación interna de desarrollo
+/Docs/
+
+# Configuración local y registros
+.env
+.env.*
+!.env.example
+*.log

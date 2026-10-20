@@ -1,230 +1,268 @@
-# 🎵 YouTube Downloader Music
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
+![Platform](https://img.shields.io/badge/Plataforma-Windows-0078D4?logo=windows&logoColor=white)
+![License](https://img.shields.io/badge/Licencia-MIT-2ea44f)
 
-Descarga y convierte música de YouTube y YouTube Music desde la línea de comandos, con barra de progreso, descarga por lotes y conversión entre formatos de audio.
+# YouTube Downloader Music
 
----
+Aplicación de consola para descargar audio de enlaces de YouTube y YouTube
+Music, organizar canciones y colecciones, y convertir archivos de audio entre
+formatos. El proyecto está escrito en Python y utiliza `yt-dlp` para la
+extracción de audio y FFmpeg para la conversión y el procesamiento de medios.
 
-## ✅ Requisitos previos
+> Utiliza la aplicación únicamente con contenido que tengas derecho a
+> descargar. El usuario es responsable de respetar los derechos de autor y las
+> condiciones de uso de las plataformas.
 
-| Herramienta | Versión mínima | Descarga |
-|---|---|---|
-| Python | 3.10+ | https://www.python.org/downloads/ |
-| FFmpeg | Cualquier versión reciente | https://ffmpeg.org/download.html |
+## ¿Qué ofrece?
 
-> **Importante:** tanto `python` como `ffmpeg` deben estar en el `PATH` del sistema.
+- Descarga individual de audio a MP3, con bitrate configurable entre 128 y
+  320 kbps.
+- Descarga de varias URL desde un archivo de texto, con progreso por pista y
+  reporte de errores sin detener el resto de la lista.
+- Descarga de playlists y álbumes en una carpeta propia; también acepta enlaces
+  que correspondan a una sola pista.
+- Inserción de metadatos y portada cuando la información está disponible.
+- Conversión por lotes a MP3, FLAC, WAV, OGG, AAC, M4A, ALAC u Opus.
+- Configuración de carpetas, bitrate, tiempo de espera de red y número máximo
+  de descargas simultáneas de fragmentos.
+- Limpieza de archivos temporales cuando una descarga falla o se interrumpe.
+- Descarga automática de FFmpeg en el primer inicio, sin tener que configurarlo
+  en el `PATH`.
+- Compilación como ejecutable de consola de un solo archivo para Windows.
 
----
+La conversión a un bitrate determinado no puede recuperar calidad que no exista
+en el audio original.
 
-## 🪟 Instalación paso a paso en Windows
+## Menú principal
 
-### Paso 1 — Instalar Python
+| Opción | Función |
+|---|---|
+| 1 | Descargar una canción |
+| 2 | Descargar URL desde un archivo de texto |
+| 3 | Descargar playlist o álbum |
+| 4 | Convertir archivos de audio |
+| 5 | Configurar el programa |
+| 6 | Salir |
 
-1. Ve a https://www.python.org/downloads/ y descarga la versión más reciente.
-2. Abre el instalador.
-3. **Marca la casilla "Add Python to PATH"** antes de hacer clic en *Install Now*.
-4. Completa la instalación.
-5. Verifica abriendo el **Símbolo del sistema** (`Win + R` → escribe `cmd` → Enter):
+## Requisitos
 
+### Ejecutar desde el código fuente
+
+- Windows 10 o posterior.
+- Python 3.10 o posterior.
+- Conexión a internet para descargar FFmpeg en el primer inicio y obtener
+  contenido de las plataformas.
+
+FFmpeg se descarga desde BtbN FFmpeg-Builds y se guarda en
+`%APPDATA%\YDM-CLI\ffmpeg`. El programa comprueba que el ejecutable funcione y
+reutiliza la copia local en los siguientes inicios. No es necesario instalar
+FFmpeg manualmente.
+
+### Ejecutar el `.exe`
+
+El usuario final no necesita instalar Python ni FFmpeg. El primer inicio del
+ejecutable requiere internet para descargar FFmpeg; las funciones que descargan
+contenido requieren conexión a internet.
+
+## Instalación y ejecución desde el código
+
+Abre PowerShell o el Símbolo del sistema en la carpeta donde quieras guardar el
+proyecto.
+
+### 1. Obtener el código
+
+Con Git:
+
+```powershell
+git clone https://github.com/LK-Ronald/downloader-music.git
+cd downloader-music
 ```
-python --version
-```
 
-Deberías ver algo como `Python 3.12.x`.
+También puedes descargar el ZIP del repositorio y extraerlo en una carpeta.
 
----
+### 2. Crear y activar un entorno virtual (recomendado)
 
-### Paso 2 — Instalar FFmpeg
-
-FFmpeg es necesario para convertir el audio descargado a MP3.
-
-1. Ve a https://github.com/BtbN/FFmpeg-Builds/releases
-2. Descarga `ffmpeg-master-latest-win64-gpl.zip`.
-3. Extrae el ZIP (por ejemplo en `C:\ffmpeg`).
-4. Agrega FFmpeg al PATH del sistema:
-   - Abre **Inicio** → busca *"Variables de entorno"* → **Editar las variables de entorno del sistema**.
-   - En la ventana que aparece haz clic en **Variables de entorno...**.
-   - En *Variables del sistema*, selecciona `Path` y haz clic en **Editar**.
-   - Haz clic en **Nuevo** y escribe la ruta a la carpeta `bin` de FFmpeg, por ejemplo: `C:\ffmpeg\bin`
-   - Acepta todas las ventanas con **Aceptar**.
-5. Cierra y vuelve a abrir el Símbolo del sistema y verifica:
-
-```
-ffmpeg -version
-```
-
----
-
-### Paso 3 — Descargar el proyecto
-
-**Opción A — Con Git:**
-```cmd
-git clone https://github.com/tu-usuario/youtube-downloader-music.git
-cd youtube-downloader-music
-```
-
-**Opción B — Sin Git:**
-1. Descarga el ZIP del repositorio.
-2. Extráelo en la carpeta que prefieras (ej. `C:\youtube-downloader-music`).
-3. Abre el Símbolo del sistema y navega a esa carpeta:
-
-```cmd
-cd C:\youtube-downloader-music
-```
-
----
-
-### Paso 4 — Crear un entorno virtual (recomendado)
-
-```cmd
+```powershell
 python -m venv venv
+.\venv\Scripts\Activate.ps1
+```
+
+Si usas Símbolo del sistema, activa el entorno con:
+
+```cmd
 venv\Scripts\activate
 ```
 
-Verás `(venv)` al inicio de la línea cuando esté activo.
+### 3. Instalar dependencias
 
----
-
-### Paso 5 — Instalar las dependencias
-
-```cmd
-pip install -r requirements.txt
+```powershell
+python -m pip install -r requirements.txt
 ```
 
----
+### 4. Iniciar la aplicación
 
-### Paso 6 — Ejecutar el programa
-
-```cmd
+```powershell
 python main.py
 ```
 
-Aparecerá el menú principal:
+En el primer inicio, FFmpeg se descargará automáticamente. Mantén abierta la
+consola durante la descarga.
 
-```
-  ╔══════════════════════════════════════════════════╗
-  ║   🎵  YouTube Downloader Music  🎵               ║
-  ║   Descarga y convierte música fácilmente         ║
-  ╚══════════════════════════════════════════════════╝
+## Uso
 
-  ── Menú Principal ──
+### Descargar una canción
 
-  [1] Descargar música
-  [2] Descargar lista de músicas desde archivo
-  [3] Convertir archivos a otro formato
-  [4] Configuración
-  [5] Salir
-```
+Selecciona `1` y pega una URL de YouTube o YouTube Music. El archivo se
+descarga como MP3 en la carpeta configurada. Por defecto, el bitrate es
+`320k`; puedes cambiarlo a `128k`, `192k` o `256k` en Configuración. Si el
+proveedor ofrece una portada, el programa intenta recortarla a formato
+cuadrado e incrustarla con sus metadatos.
 
----
+### Descargar desde una lista de texto
 
-## 📖 Uso de cada funcionalidad
+Selecciona `2` e indica la ruta del archivo. También puedes usar el archivo
+`canciones_lista.txt` incluido en el proyecto. Escribe una URL por línea; las
+líneas vacías y las que empiezan con `#` se ignoran:
 
-### [1] Descargar música
-
-1. Elige la opción `1`.
-2. Pega el enlace de YouTube o YouTube Music.
-3. El programa descarga automáticamente en la mejor calidad disponible y convierte a **MP3** con el bitrate configurado (por defecto **320 kbps**).
-4. Si YouTube proporciona una portada, se descarga, recorta a formato cuadrado (1:1) con FFmpeg y se embebe en el MP3 junto con sus metadatos.
-5. La canción se guarda en el directorio configurado en **Configuración** (por defecto: `C:\Users\TuUsuario\Music\Downloads`).
-
----
-
-### [2] Descargar lista desde archivo
-
-1. Crea un archivo de texto (o edita `canciones_lista.txt`).
-2. Escribe una URL por línea. Las líneas que empiezan con `#` son comentarios.
-
-```
-# Mi lista de música
-https://www.youtube.com/watch?v=XXXXXXXXXXX
-https://music.youtube.com/watch?v=XXXXXXXXXXX
+```text
+# Lista de ejemplo
+https://www.youtube.com/watch?v=ID_DE_VIDEO
+https://music.youtube.com/watch?v=ID_DE_VIDEO
 ```
 
-3. Elige la opción `2` e indica la ruta del archivo.
-4. El programa descarga todas las canciones una por una mostrando el progreso. Si alguna falla, avisa y continúa con las demás.
+El programa procesa las URL en orden y continúa con las siguientes aunque una
+descarga falle.
 
----
+### Descargar una playlist o álbum
 
-### [3] Convertir archivos a otro formato
+Selecciona `3` y pega el enlace de la colección. Las pistas disponibles se
+guardan en una subcarpeta nombrada a partir del título de la playlist o álbum.
+Si el enlace es de una sola canción, el programa la descarga como pista
+individual.
 
-1. Elige la opción `3`.
-2. Indica el directorio de origen (o presiona Enter para usar el configurado).
-3. Indica el directorio destino donde se guardarán los archivos convertidos.
-4. Elige el formato de salida: `mp3`, `flac`, `wav`, `ogg`, `aac`, `m4a`, `alac`, `opus`.
-5. Indica si deseas eliminar los archivos originales (por defecto: **No**).
-6. El programa convierte todos los archivos de audio encontrados. Si alguno falla, hace **rollback** (elimina el archivo parcial) y muestra cuáles fallaron.
+### Convertir archivos
 
----
+Selecciona `4`, indica la carpeta de origen y la de destino, y elige un formato:
+`mp3`, `flac`, `wav`, `ogg`, `aac`, `m4a`, `alac` u `opus`. La eliminación de
+los originales es opcional y está desactivada por defecto. Si una conversión
+falla, se elimina el archivo parcial correspondiente y el resto del lote
+continúa.
 
-### [4] Configuración
+### Configurar opciones
 
-El tiempo máximo de conexión es de 30 segundos por defecto (configurable entre 5 y 120 segundos). Las descargas simultáneas de fragmentos usan un máximo de 4 por defecto, con un rango configurable de 1 a 8.
+Selecciona `5` para cambiar los directorios de descargas y conversiones, el
+bitrate, el tiempo máximo de conexión o el número de descargas simultáneas de
+fragmentos. La descarga genera MP3; el selector de formato de conversión está
+en la opción `4`.
 
-Al fallar o cancelar una descarga con `Ctrl+C`, se limpian los archivos temporales generados (`.part`, `.ytdl` y miniaturas sueltas). Los procesos auxiliares de FFmpeg se terminan al cancelar.
+| Ajuste | Valor inicial | Rango / opciones |
+|---|---:|---|
+| Directorio de descargas | `~/Music/Downloads` | Ruta configurable |
+| Directorio de conversiones | `~/Music/Converted` | Ruta configurable |
+| Bitrate | `320k` | `128k`, `192k`, `256k`, `320k` |
+| Tiempo de espera de conexión | 30 segundos | 5–120 segundos |
+| Descargas simultáneas de fragmentos | 4 | 1–8 |
 
-Permite personalizar:
+La configuración se guarda en `~/.ytdl_music_config.json` (en Windows,
+normalmente dentro de la carpeta del perfil del usuario).
 
-- **Directorio de descargas** — dónde se guardan las canciones descargadas.
-- **Directorio de conversiones** — dónde se guardan los archivos convertidos.
-- **Formato de descarga** — formato de salida al descargar (por defecto: `mp3`).
-- **Bitrate** — calidad del audio: `128k`, `192k`, `256k`, `320k` (por defecto: `320k`).
+## Crear el ejecutable de Windows
 
-La configuración se guarda en `C:\Users\TuUsuario\.ytdl_music_config.json`.
+Con Python y las dependencias del proyecto instaladas, instala PyInstaller y
+ejecuta el script de compilación:
 
----
-
-## 🗂️ Estructura del proyecto
-
-```
-youtube-downloader-music/
-├── main.py                      # Punto de entrada
-├── requirements.txt             # Dependencias
-├── canciones_lista.txt          # Ejemplo de lista de canciones
-├── README.md
-│
-├── core/                        # Lógica central
-│   ├── config_manager.py        # Gestión de configuración (SRP)
-│   └── menu.py                  # Menú principal (OCP)
-│
-├── features/                    # Funcionalidades del menú
-│   ├── downloader.py            # Opción 1: descarga individual
-│   ├── batch_downloader.py      # Opción 2: descarga por lotes
-│   ├── converter.py             # Opción 3: conversión de formatos
-│   └── configurator.py          # Opción 4: configuración
-│
-└── utils/                       # Utilidades transversales
-    ├── ui.py                    # Colores y presentación en consola
-    └── ytdlp_wrapper.py         # Wrapper de yt-dlp con barra de progreso
+```powershell
+python -m pip install pyinstaller
+python build.py
 ```
 
----
+El ejecutable de consola se genera en `dist\YDM-CLI.exe`. FFmpeg no se incluye
+en el `.exe`; cada usuario lo descarga en su primer inicio.
 
-## 🔧 Actualizar yt-dlp
+### Recompilar automáticamente al cambiar el código
 
-YouTube actualiza su plataforma frecuentemente. Si las descargas fallan con errores de JavaScript, actualiza yt-dlp:
+Para compilar una vez y volver a compilar cuando cambien archivos Python,
+PowerShell o `requirements.txt`, ejecuta desde PowerShell en la carpeta del
+proyecto:
 
-```cmd
-pip install -U yt-dlp
+```powershell
+.\watch_build.ps1
 ```
 
----
+El watcher compila al arrancar, espera dos segundos de estabilidad tras los
+cambios y actualiza `dist\YDM-CLI.exe`. Ignora las carpetas generadas. Para
+detenerlo, presiona `Ctrl+C`. Si la política de ejecución de PowerShell impide
+iniciar el script, puedes usar:
 
-## ❓ Preguntas frecuentes
+```powershell
+powershell -ExecutionPolicy Bypass -File .\watch_build.ps1
+```
 
-**¿El programa descarga listas de reproducción completas?**
-La opción 1 acepta URLs de listas de reproducción de YouTube. yt-dlp las detecta automáticamente y descarga todas las canciones.
+## Estructura del proyecto
 
-**¿Por qué dice "FFmpeg no encontrado"?**
-FFmpeg no está en el PATH. Revisa el Paso 2 de la instalación.
+```text
+.
+├── main.py
+├── build.py
+├── watch_build.ps1
+├── requirements.txt
+├── canciones_lista.txt
+├── core/
+│   ├── config_manager.py
+│   └── menu.py
+├── features/
+│   ├── downloader.py
+│   ├── batch_downloader.py
+│   ├── playlist_downloader.py
+│   ├── converter.py
+│   └── configurator.py
+├── utils/
+│   ├── ffmpeg_manager.py
+│   ├── ffmpeg_process.py
+│   ├── ui.py
+│   └── ytdlp_wrapper.py
+└── tests/
+    └── test_ffmpeg_manager.py
+```
 
-**¿La calidad de audio es buena?**
-Sí. El programa descarga el mejor audio disponible (generalmente 128–320 kbps según la fuente) y lo convierte a MP3 con el bitrate que configures (mínimo 128 kbps por defecto 320 kbps).
+- `core/` contiene la configuración persistente y el menú de navegación.
+- `features/` contiene las acciones que el usuario ejecuta desde el menú.
+- `utils/` incluye la integración con `yt-dlp`, la gestión de FFmpeg y la
+  interfaz de consola.
+- `build.py` y `watch_build.ps1` permiten crear y actualizar el ejecutable.
 
-**¿Funciona con YouTube Music?**
-Sí. Acepta URLs de `music.youtube.com` y `youtube.com` indistintamente.
+## Solución de problemas
 
----
+**No se puede descargar FFmpeg**
 
-## 📄 Licencia
+Comprueba la conexión a internet y que GitHub sea accesible. FFmpeg se guarda
+en `%APPDATA%\YDM-CLI\ffmpeg`; no necesita añadirse al `PATH`.
 
-MIT License — libre para uso personal y educativo.
+**Falla una descarga de YouTube**
+
+Actualiza `yt-dlp` en el entorno Python activo y vuelve a intentarlo:
+
+```powershell
+python -m pip install --upgrade yt-dlp
+```
+
+Las plataformas pueden cambiar y requerir una versión reciente de `yt-dlp`.
+Algunos videos pueden no estar disponibles, ser privados o tener restricciones.
+
+**No se puede convertir un archivo**
+
+Verifica que FFmpeg se haya descargado correctamente, que el archivo de origen
+sea compatible y que haya espacio y permisos de escritura en la carpeta destino.
+
+## Dependencias y licencias
+
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp): extracción y descarga multimedia.
+- [Mutagen](https://github.com/quodlibet/mutagen): trabajo con metadatos de
+  audio.
+- [Pillow](https://python-pillow.org/): soporte de imágenes.
+- [FFmpeg](https://ffmpeg.org/): conversión y procesamiento de audio y portadas.
+  Se descarga durante la ejecución y no se distribuye dentro del `.exe`.
+
+El código de este proyecto se distribuye bajo la licencia MIT. Las dependencias
+y FFmpeg conservan sus propias licencias; consulta sus proyectos oficiales para
+conocer sus términos.

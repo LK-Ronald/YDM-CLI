@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 
 from core.config_manager import ConfigManager
+from utils.ffmpeg_manager import FFmpegManager
 from utils.ffmpeg_process import run_ffmpeg
 from utils.ui import UI
 
@@ -22,6 +23,8 @@ class Converter:
     def __init__(self, config_manager: ConfigManager):
         self._config = config_manager
         self._ui = UI()
+        ffmpeg_path = FFmpegManager.get_path()
+        self._ffmpeg_executable = str(ffmpeg_path) if ffmpeg_path else "ffmpeg"
 
     def run(self) -> None:
         self._ui.section("Convertir archivos a otro formato")
@@ -149,7 +152,7 @@ class Converter:
         }
         extra_args = codec_map.get(fmt, [])
         cmd = [
-            "ffmpeg", "-y", "-i", str(src),
+            self._ffmpeg_executable, "-y", "-i", str(src),
             *extra_args,
             str(dst)
         ]
@@ -165,7 +168,7 @@ class Converter:
 
     def _check_ffmpeg(self) -> bool:
         try:
-            run_ffmpeg(["ffmpeg", "-version"], timeout=5)
+            run_ffmpeg([self._ffmpeg_executable, "-version"], timeout=5)
             return True
         except (FileNotFoundError, subprocess.TimeoutExpired):
             return False

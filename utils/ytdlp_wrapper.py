@@ -8,13 +8,6 @@ import sys
 import tempfile
 import urllib.parse
 from pathlib import Path
-<<<<<<< HEAD
-
-=======
-<<<<<<< Updated upstream
->>>>>>> feature/control-descargas
-from core.config_manager import ConfigManager
-=======
 
 from core.config_manager import (
     CONCURRENT_FRAGMENT_DOWNLOADS_MAX,
@@ -24,26 +17,29 @@ from core.config_manager import (
     ConfigManager,
 )
 from utils.ffmpeg_process import run_ffmpeg
->>>>>>> Stashed changes
+from utils.ffmpeg_manager import FFmpegManager
 
 try:
     import yt_dlp
     from yt_dlp.postprocessor.common import PostProcessor
     from yt_dlp.postprocessor.embedthumbnail import EmbedThumbnailPP
     from yt_dlp.utils import PostProcessingError
+
     YTDLP_AVAILABLE = True
-except ImportError:
-    YTDLP_AVAILABLE = False
-<<<<<<< HEAD
-=======
-<<<<<<< Updated upstream
-=======
->>>>>>> feature/control-descargas
+except ImportError:  # pragma: no cover
+    yt_dlp = None
     PostProcessor = object
+    EmbedThumbnailPP = None
+    PostProcessingError = RuntimeError
+    YTDLP_AVAILABLE = False
 
 
 class SquareThumbnailPP(PostProcessor):
     """Recorta el thumbnail descargado a un cuadrado antes de embeberlo."""
+
+    def __init__(self, downloader, ffmpeg_executable: str):
+        super().__init__(downloader)
+        self._ffmpeg_executable = ffmpeg_executable
 
     def run(self, info: dict) -> tuple[list[str], dict]:
         thumbnail = next(
@@ -72,30 +68,8 @@ class SquareThumbnailPP(PostProcessor):
             temporary_path = Path(temporary_file.name)
 
         try:
-<<<<<<< HEAD
-            subprocess.run(
-                [
-                    "ffmpeg",
-                    "-hide_banner",
-                    "-loglevel",
-                    "error",
-                    "-y",
-                    "-i",
-                    str(thumbnail_path),
-                    "-vf",
-                    r"crop=min(iw\,ih):min(iw\,ih)",
-                    "-frames:v",
-                    "1",
-                    str(temporary_path),
-                ],
-                capture_output=True,
-                text=True,
-                timeout=300,
-                check=True,
-            )
-=======
             command = [
-                "ffmpeg",
+                self._ffmpeg_executable,
                 "-hide_banner",
                 "-loglevel",
                 "error",
@@ -109,8 +83,10 @@ class SquareThumbnailPP(PostProcessor):
                 str(temporary_path),
             ]
             result = run_ffmpeg(command, timeout=300)
-            result.check_returncode()
->>>>>>> feature/control-descargas
+            if result.returncode != 0:
+                raise PostProcessingError(
+                    result.stderr.strip() or "FFmpeg falló al recortar la portada."
+                )
             temporary_path.replace(thumbnail_path)
         except FileNotFoundError as error:
             raise PostProcessingError(
@@ -120,20 +96,15 @@ class SquareThumbnailPP(PostProcessor):
             raise PostProcessingError(
                 "Se agotó el tiempo al recortar la portada con FFmpeg."
             ) from error
-        except subprocess.CalledProcessError as error:
-            detail = (error.stderr or "").strip()
+        except OSError as error:
             raise PostProcessingError(
-                f"FFmpeg no pudo recortar la portada: {detail}"
+                f"No se pudo recortar la portada: {error}"
             ) from error
         finally:
             temporary_path.unlink(missing_ok=True)
 
         self.to_screen(f"Thumbnail recortado a 1:1: {thumbnail_path.name}")
         return [], info
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
->>>>>>> feature/control-descargas
 
 
 class YtDlpWrapper:
@@ -141,6 +112,9 @@ class YtDlpWrapper:
 
     def __init__(self, config_manager: ConfigManager):
         self._config = config_manager
+        ffmpeg_path = FFmpegManager.get_path()
+        self._ffmpeg_executable = str(ffmpeg_path) if ffmpeg_path else "ffmpeg"
+        self._ffmpeg_location = str(ffmpeg_path.parent) if ffmpeg_path else None
 
     @staticmethod
     def normalize_url(url: str) -> str:
@@ -154,7 +128,11 @@ class YtDlpWrapper:
             qs = urllib.parse.parse_qs(parsed.query)
             if "list" in qs and "playlist" not in parsed.path:
                 list_id = qs["list"][0]
-                domain = "music.youtube.com" if "music.youtube" in parsed.netloc else "www.youtube.com"
+                domain = (
+                    "music.youtube.com"
+                    if "music.youtube" in parsed.netloc
+                    else "www.youtube.com"
+                )
                 return f"https://{domain}/playlist?list={list_id}"
         except Exception:
             pass
@@ -216,22 +194,12 @@ class YtDlpWrapper:
                 "yt-dlp no está instalado. Ejecuta: pip install yt-dlp"
             )
 
-<<<<<<< HEAD
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 
         bitrate = self._config.get("bitrate", "320k")
         bitrate_num = str(bitrate).replace("k", "")
 
-        output_template = str(output_path / "%(title)s.%(ext)s")
-=======
-        bitrate = self._config.get("bitrate", "320k")
-<<<<<<< Updated upstream
-        bitrate_num = bitrate.replace("k", "")
-
-        output_template = str(Path(output_dir) / "%(title)s.%(ext)s")
-=======
-        bitrate_num = str(bitrate).replace("k", "")
         try:
             socket_timeout = self._bounded_config_value(
                 "socket_timeout",
@@ -248,13 +216,13 @@ class YtDlpWrapper:
 
         output_template = str(output_path / "%(title)s.%(ext)s")
         temporary_files_before = self._snapshot_temporary_files(output_path)
->>>>>>> Stashed changes
->>>>>>> feature/control-descargas
+        info: dict | None = None
 
         ydl_opts = {
             "format": "bestaudio/best",
             "outtmpl": output_template,
             "noplaylist": noplaylist,
+            "ffmpeg_location": self._ffmpeg_location,
             "socket_timeout": socket_timeout,
             "concurrent_fragment_downloads": concurrent_fragments,
             "progress_hooks": [self._progress_hook],
@@ -280,16 +248,17 @@ class YtDlpWrapper:
             "fragment_retries": 5,
         }
 
-        self._last_filename = ""
-
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.add_post_processor(SquareThumbnailPP(ydl))
-                ydl.add_post_processor(EmbedThumbnailPP(ydl))
+                if EmbedThumbnailPP is not None:
+                    ydl.add_post_processor(
+                        SquareThumbnailPP(ydl, self._ffmpeg_executable)
+                    )
+                    ydl.add_post_processor(EmbedThumbnailPP(ydl))
                 info = ydl.extract_info(url, download=True)
-                title = info.get("title", url) if info else url
+                title = info.get("title", url) if isinstance(info, dict) else url
             self._cleanup_thumbnail_files(output_path, info)
-            print()  # Salto de línea tras la barra de progreso
+            print()
             return True, title
         except KeyboardInterrupt:
             cleanup_errors = self._cleanup_temporary_files(
@@ -342,7 +311,7 @@ class YtDlpWrapper:
     def _snapshot_temporary_files(output_dir: Path) -> dict[Path, tuple[int, int]]:
         if not output_dir.exists():
             return {}
-        snapshot = {}
+        snapshot: dict[Path, tuple[int, int]] = {}
         for path in output_dir.iterdir():
             if not path.is_file() or not YtDlpWrapper._is_temporary_file(path):
                 continue
@@ -377,7 +346,7 @@ class YtDlpWrapper:
     ) -> list[str]:
         if not output_dir.exists():
             return []
-        errors = []
+        errors: list[str] = []
         for path in output_dir.iterdir():
             if not path.is_file() or not YtDlpWrapper._is_temporary_file(path):
                 continue
@@ -432,7 +401,6 @@ class YtDlpWrapper:
 
             sys.stdout.write(line)
             sys.stdout.flush()
-
         elif status == "finished":
             sys.stdout.write(f"\r  {'█' * 30} 100%  Procesando audio...   ")
             sys.stdout.flush()
@@ -459,6 +427,5 @@ class YtDlpWrapper:
                 "FFmpeg no encontrado. "
                 "Instálalo y agrégalo al PATH del sistema."
             )
-        # Devuelve solo la última línea relevante del error
-        lines = [l.strip() for l in raw.splitlines() if l.strip()]
+        lines = [line.strip() for line in raw.splitlines() if line.strip()]
         return lines[-1] if lines else raw

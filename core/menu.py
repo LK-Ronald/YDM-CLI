@@ -25,7 +25,6 @@ class Menu:
 
     def run(self) -> None:
         """Bucle principal del menú."""
-        self._ui.print_banner()
         while True:
             self._ui.print_menu()
             choice = input("\n  Selecciona una opción: ").strip()
