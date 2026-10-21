@@ -14,6 +14,16 @@ extraction and FFmpeg for conversion and media processing.
 > Use the application only with content you have the right to download. The
 > user is responsible for respecting copyright and the platforms' terms of use.
 
+## Windows executable
+
+You can download the already-compiled version from the releases section:
+https://github.com/LK-Ronald/YDM-CLI/releases/tag/v2.0.0-alpha
+
+The executable is found in the **Assets** section of that page, as
+`YDM-CLI.exe`. Download it, save it in whichever folder you prefer, and open
+it; it does not require installing Python. On its first launch it will download
+FFmpeg automatically, so an internet connection is needed.
+
 ## What does it offer?
 
 - Individual audio download to MP3, with a configurable bitrate between 128 and
