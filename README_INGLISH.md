@@ -1,8 +1,8 @@
+![UI-YDM](logo_programa.jpeg)
+
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D4?logo=windows&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-2ea44f)
-
-![UI-YDM](ui.png)
 
 # YouTube Downloader Music
 
